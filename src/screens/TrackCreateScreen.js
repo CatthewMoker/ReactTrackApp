@@ -1,48 +1,31 @@
 import '../_mockLocation';
 
-import React, { useEffect, useState, useContext } from 'react';
-import { StyleSheet } from 'react-native';
+import React, { useContext, useCallback } from 'react';
+import { StyleSheet, SafeAreaView } from 'react-native';
 import { Text } from 'react-native-elements';
-import { SafeAreaView } from 'react-navigation';
-import { requestPermissionsAsync, watchPositionAsync, Accuracy } from 'expo-location';
+import { withNavigationFocus } from 'react-navigation';
 import Map from '../components/Map';
+import TrackForm from '../components/TrackForm';
 import { Context as LocationContext } from '../context/LocationContext';
+import useLocation from '../hooks/useLocation';
 
-const TaskCreateScreen = () => {
-    const { addLocation } = useContext(LocationContext);
-    const [err, setErr] = useState(null);
-
-    const startWatching = async () => {
-        try {
-            const { granted } = await requestPermissionsAsync();
-            await watchPositionAsync({
-                accuracy: Accuracy.BestForNavigation,
-                timeInterval: 1000,
-                distanceInterval: 10
-            }, (location) => {
-                addLocation(location);
-            });
-            if (!granted) {
-                throw new Error('Location permission not granted');
-            }
-        } catch (e) {
-            setErr(e);
-        }
-    };
-
-    useEffect(() => {
-        startWatching();
-    }, []);
+const TrackCreateScreen = ({ isFocused }) => {
+    const { state, addLocation } = useContext(LocationContext);
+    const callback = useCallback((location) => {
+        addLocation(location, state.recording);
+    }, [state.recording]);
+    const [err] = useLocation(isFocused || state.recording, callback);
 
     return (
         <SafeAreaView forceInset={{ top: 'always' }}>
             <Text h2>Create a track</Text>
             <Map/>
             {err ? <Text>Please enable location services</Text>:null}
+            <TrackForm/>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({});
 
-export default TaskCreateScreen;
+export default withNavigationFocus(TrackCreateScreen);
